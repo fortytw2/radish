@@ -1,7 +1,7 @@
 package beanstalkd
 
 import (
-	"github.com/fortytw2/radish/broker"
+	"github.com/fortytw2/radish"
 	"github.com/nutrun/lentil"
 )
 
@@ -11,7 +11,7 @@ type publisher struct {
 	queue string
 }
 
-func newPublisher(l *lentil.Beanstalkd, queue string) (broker.Publisher, error) {
+func newPublisher(l *lentil.Beanstalkd, queue string) (radish.Publisher, error) {
 	return &publisher{
 		queue: queue,
 		l:     l,

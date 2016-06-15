@@ -1,29 +1,28 @@
-package inmem
+package radish
 
 import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/radish/broker"
 	"github.com/fortytw2/leaktest"
 )
 
 func BenchmarkConsume(b *testing.B) {
-	broker.ConsumeBench(NewBroker(), 500, b)
+	ConsumeBench(NewMemBroker(), 500, b)
 }
 
 func BenchmarkPublishParallel(b *testing.B) {
-	broker.ParallelPublishBench(NewBroker(), b)
+	ParallelPublishBench(NewMemBroker(), b)
 }
 
 func BenchmarkPublish(b *testing.B) {
-	broker.PublishBench(NewBroker(), b)
+	PublishBench(NewMemBroker(), b)
 }
 
 func TestMemBroker(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	broker := NewBroker()
+	broker := NewMemBroker()
 
 	// Try to publish
 	pub, err := broker.Publisher("test")

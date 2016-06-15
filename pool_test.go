@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/fortytw2/leaktest"
-	"github.com/fortytw2/radish/broker"
-	"github.com/fortytw2/radish/inmem"
 )
 
 func TestPool(t *testing.T) {
@@ -128,6 +126,6 @@ func TestConcurrentPool(t *testing.T) {
 	}
 }
 
-func testBroker(t *testing.T) broker.Broker {
-	return inmem.NewBroker()
+func testBroker(t *testing.T) Broker {
+	return NewMemBroker()
 }

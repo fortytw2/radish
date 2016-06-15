@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fortytw2/radish/broker"
+	"github.com/fortytw2/radish"
 	"github.com/nutrun/lentil"
 )
 
@@ -17,7 +17,7 @@ type consumer struct {
 	sync.RWMutex
 }
 
-func newConsumer(l *lentil.Beanstalkd, queue string) (broker.Consumer, error) {
+func newConsumer(l *lentil.Beanstalkd, queue string) (radish.Consumer, error) {
 	return &consumer{
 		queue: queue,
 		l:     l,

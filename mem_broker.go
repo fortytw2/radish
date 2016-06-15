@@ -1,12 +1,10 @@
-package inmem
+package radish
 
 import (
 	"errors"
 	"reflect"
 	"sync"
 	"time"
-
-	"github.com/fortytw2/radish/broker"
 )
 
 // ibroker implements the Broker interface in-memory
@@ -33,8 +31,8 @@ type publisher struct {
 	Closed bool
 }
 
-// NewBroker returns a pure in-mem broker
-func NewBroker() broker.Broker {
+// NewMemBroker returns a pure in-mem broker
+func NewMemBroker() Broker {
 	in := &ibroker{
 		Queues: make(map[string][]interface{}),
 	}
@@ -46,7 +44,7 @@ func (i *ibroker) Close() error {
 	return nil
 }
 
-func (i *ibroker) Consumer(q string) (broker.Consumer, error) {
+func (i *ibroker) Consumer(q string) (Consumer, error) {
 	c := &consumer{
 		Broker: i,
 		Queue:  q,
@@ -54,7 +52,7 @@ func (i *ibroker) Consumer(q string) (broker.Consumer, error) {
 	return c, nil
 }
 
-func (i *ibroker) Publisher(q string) (broker.Publisher, error) {
+func (i *ibroker) Publisher(q string) (Publisher, error) {
 	p := &publisher{
 		Broker: i,
 		Queue:  q,

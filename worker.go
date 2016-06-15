@@ -5,8 +5,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/fortytw2/radish/broker"
-	"gopkg.in/inconshreveable/log15.v2"
+	"github.com/go-kit/kit/log"
 )
 
 // DefaultTimeout is the length a new worker will wait to get a task
@@ -16,27 +15,27 @@ var DefaultTimeout = time.Second
 type WorkFunc func(interface{}) ([]interface{}, error)
 
 // A Worker is a single unit of execution, working single threadedly
-type Worker struct {
+type worker struct {
 	q  string
-	c  broker.Consumer
-	p  broker.Publisher
+	c  Consumer
+	p  Publisher
 	fn WorkFunc
 
-	log  log15.Logger
+	log  log.Logger
 	stop chan struct{}
 }
 
-// WorkerOpts are used to set up a new worker
-type WorkerOpts struct {
-	b     broker.Broker
+// workerOpts are used to set up a new worker
+type workerOpts struct {
+	b     Broker
 	queue string
 	fn    WorkFunc
 	stop  chan struct{}
-	log   log15.Logger
+	log   log.Logger
 }
 
 // NewWorker creates a new worker
-func NewWorker(opts *WorkerOpts) (*Worker, error) {
+func newWorker(opts *workerOpts) (*worker, error) {
 	c, err := opts.b.Consumer(opts.queue)
 	if err != nil {
 		return nil, err
@@ -47,7 +46,7 @@ func NewWorker(opts *WorkerOpts) (*Worker, error) {
 		return nil, err
 	}
 
-	return &Worker{
+	return &worker{
 		q:    opts.queue,
 		c:    c,
 		p:    p,
@@ -58,7 +57,7 @@ func NewWorker(opts *WorkerOpts) (*Worker, error) {
 }
 
 // Work "starts" the given worker
-func (w *Worker) Work(wg *sync.WaitGroup) {
+func (w *worker) Work(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	b := backoff.NewExponentialBackOff()
@@ -74,14 +73,14 @@ func (w *Worker) Work(wg *sync.WaitGroup) {
 			var o []byte
 			err := w.c.ConsumeTimeout(&o, DefaultTimeout)
 			if err != nil {
-				w.log.Error("could not consume from queue", "error", err)
+				w.log.Log("msg", "could not consume from queue", "error", err)
 				time.Sleep(b.NextBackOff())
 				continue
 			}
 
 			n, err := w.fn(o)
 			if err != nil {
-				w.log.Warn("could not process task", "error", err)
+				w.log.Log("msg", "could not process task", "error", err)
 				time.Sleep(b.NextBackOff())
 			}
 

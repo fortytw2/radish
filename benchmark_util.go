@@ -1,4 +1,4 @@
-package broker
+package radish
 
 import "testing"
 
@@ -31,6 +31,7 @@ func ParallelPublishBench(br Broker, b *testing.B) {
 	})
 }
 
+// ConsumeBench is a benchmark helper for consumers
 func ConsumeBench(br Broker, n int, b *testing.B) {
 	p, err := br.Publisher("benchconsume")
 	if err != nil {

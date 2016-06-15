@@ -4,30 +4,27 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/fortytw2/radish/broker"
-	"gopkg.in/inconshreveable/log15.v2"
+	"github.com/go-kit/kit/log"
 )
 
 // A Pool is a set of workers that all function on the same queue
 type Pool struct {
 	queue string
-	b     broker.Broker
+	b     Broker
 
 	fn WorkFunc
 
-	log log15.Logger
-	// workers are only kept track of by their stop channel
+	log log.Logger
+	// workers are kept track of by their stop channel
 	workers []chan struct{}
 	wg      *sync.WaitGroup
 	*sync.RWMutex
 }
 
 // NewPool returns a configurable pool
-func NewPool(b broker.Broker, queue string, fn WorkFunc, log log15.Logger) *Pool {
-	if log == nil {
-		l := log15.New()
-		l.SetHandler(log15.DiscardHandler())
-		log = l
+func NewPool(b Broker, queue string, fn WorkFunc, l log.Logger) *Pool {
+	if l == nil {
+		l = log.NewNopLogger()
 	}
 
 	return &Pool{
@@ -39,7 +36,7 @@ func NewPool(b broker.Broker, queue string, fn WorkFunc, log log15.Logger) *Pool
 		workers: make([]chan struct{}, 0),
 		wg:      &sync.WaitGroup{},
 		RWMutex: &sync.RWMutex{},
-		log:     log,
+		log:     l,
 	}
 }
 
@@ -84,7 +81,7 @@ func (p *Pool) Stop() error {
 func (p *Pool) addWorker() error {
 	stop := make(chan struct{})
 	p.wg.Add(1)
-	w, err := NewWorker(&WorkerOpts{
+	w, err := newWorker(&workerOpts{
 		b:     p.b,
 		queue: p.queue,
 		fn:    p.fn,
