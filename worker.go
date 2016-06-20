@@ -2,6 +2,7 @@ package radish
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -12,7 +13,7 @@ import (
 var DefaultTimeout = time.Second
 
 // A WorkFunc processes the data passed to a Worker
-type WorkFunc func(interface{}) ([]interface{}, error)
+type WorkFunc func([]byte) ([][]byte, error)
 
 // A Worker is a single unit of execution, working single threadedly
 type worker struct {
@@ -21,7 +22,10 @@ type worker struct {
 	p  Publisher
 	fn WorkFunc
 
-	log  log.Logger
+	log log.Logger
+
+	timeSinceWork *int64
+
 	stop chan struct{}
 }
 
@@ -30,6 +34,7 @@ type workerOpts struct {
 	b     Broker
 	queue string
 	fn    WorkFunc
+	tsw   *int64
 	stop  chan struct{}
 	log   log.Logger
 }
@@ -47,12 +52,13 @@ func newWorker(opts *workerOpts) (*worker, error) {
 	}
 
 	return &worker{
-		q:    opts.queue,
-		c:    c,
-		p:    p,
-		fn:   opts.fn,
-		stop: opts.stop,
-		log:  opts.log,
+		q:             opts.queue,
+		c:             c,
+		p:             p,
+		timeSinceWork: opts.tsw,
+		fn:            opts.fn,
+		stop:          opts.stop,
+		log:           opts.log,
 	}, nil
 }
 
@@ -73,13 +79,17 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 			var o []byte
 			err := w.c.ConsumeTimeout(&o, DefaultTimeout)
 			if err != nil {
-				w.log.Log("msg", "could not consume from queue", "error", err)
-				time.Sleep(b.NextBackOff())
+				t := b.NextBackOff()
+				atomic.AddInt64(w.timeSinceWork, t.Nanoseconds())
+				time.Sleep(t)
 				continue
+			} else {
+				atomic.SwapInt64(w.timeSinceWork, 0)
 			}
 
 			n, err := w.fn(o)
 			if err != nil {
+				w.c.Nack()
 				w.log.Log("msg", "could not process task", "error", err)
 				time.Sleep(b.NextBackOff())
 			}

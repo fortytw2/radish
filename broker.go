@@ -11,6 +11,8 @@ type Broker interface {
 	Consumer(queue string) (Consumer, error)
 	// Publisher returns _a_ Publisher
 	Publisher(queue string) (Publisher, error)
+	// Len returns the length of a given queue
+	Len(queue string) int
 }
 
 // Publisher is used to push messages into a queue

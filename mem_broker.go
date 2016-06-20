@@ -44,6 +44,12 @@ func (i *ibroker) Close() error {
 	return nil
 }
 
+func (i *ibroker) Len(q string) int {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	return len(i.Queues[q])
+}
+
 func (i *ibroker) Consumer(q string) (Consumer, error) {
 	c := &consumer{
 		Broker: i,
@@ -68,6 +74,9 @@ func (i *publisher) Close() error {
 func (i *publisher) Publish(in interface{}) error {
 	i.Broker.lock.Lock()
 	defer i.Broker.lock.Unlock()
+	if in == nil {
+		return errors.New("cannot publish nil")
+	}
 
 	queue := i.Broker.Queues[i.Queue]
 	queue = append(queue, in)

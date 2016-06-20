@@ -3,6 +3,8 @@ package radish
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-kit/kit/log"
 )
@@ -14,6 +16,7 @@ type Pool struct {
 
 	fn WorkFunc
 
+	tsw int64
 	log log.Logger
 	// workers are kept track of by their stop channel
 	workers []chan struct{}
@@ -78,6 +81,10 @@ func (p *Pool) Stop() error {
 	return nil
 }
 
+func (p *Pool) TotalTimeSinceWork() time.Duration {
+	return time.Duration(atomic.LoadInt64(&p.tsw))
+}
+
 func (p *Pool) addWorker() error {
 	stop := make(chan struct{})
 	p.wg.Add(1)
@@ -85,6 +92,7 @@ func (p *Pool) addWorker() error {
 		b:     p.b,
 		queue: p.queue,
 		fn:    p.fn,
+		tsw:   &p.tsw,
 		stop:  stop,
 		log:   p.log,
 	})
