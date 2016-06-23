@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/go-kit/kit/log"
 )
 
@@ -66,7 +65,6 @@ func newWorker(opts *workerOpts) (*worker, error) {
 func (w *worker) Work(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	b := backoff.NewExponentialBackOff()
 	for {
 		select {
 		case _, ok := <-w.stop:
@@ -79,9 +77,8 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 			var o []byte
 			err := w.c.ConsumeTimeout(&o, DefaultTimeout)
 			if err != nil {
-				t := b.NextBackOff()
-				atomic.AddInt64(w.timeSinceWork, t.Nanoseconds())
-				time.Sleep(t)
+				atomic.AddInt64(w.timeSinceWork, int64(DefaultTimeout))
+				time.Sleep(10 * time.Millisecond)
 				continue
 			} else {
 				atomic.SwapInt64(w.timeSinceWork, 0)
@@ -91,7 +88,7 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 			if err != nil {
 				w.c.Nack()
 				w.log.Log("msg", "could not process task", "error", err)
-				time.Sleep(b.NextBackOff())
+				continue
 			}
 
 			if len(n) >= 0 {

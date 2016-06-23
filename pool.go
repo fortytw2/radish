@@ -81,6 +81,7 @@ func (p *Pool) Stop() error {
 	return nil
 }
 
+// TotalTimeSinceWork returns the time since any worker has seen work
 func (p *Pool) TotalTimeSinceWork() time.Duration {
 	return time.Duration(atomic.LoadInt64(&p.tsw))
 }
