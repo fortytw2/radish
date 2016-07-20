@@ -16,9 +16,9 @@ func TestPool(t *testing.T) {
 	b := testBroker(t)
 
 	var total int64
-	p := NewPool(b, q, func(i []byte) ([][]byte, error) {
+	p := NewPool(b, q, func(i interface{}) error {
 		atomic.AddInt64(&total, 1)
-		return nil, nil
+		return nil
 	}, nil)
 
 	pub, err := b.Publisher(q)
@@ -57,14 +57,14 @@ func TestConcurrentPool(t *testing.T) {
 	b := testBroker(t)
 
 	var total int64
-	p := NewPool(b, q, func(i []byte) ([][]byte, error) {
+	p := NewPool(b, q, func(i interface{}) error {
 		atomic.AddInt64(&total, 1)
-		return nil, nil
+		return nil
 	}, nil)
 
-	p2 := NewPool(b, q2, func(i []byte) ([][]byte, error) {
+	p2 := NewPool(b, q2, func(i interface{}) error {
 		atomic.AddInt64(&total, 1)
-		return nil, nil
+		return nil
 	}, nil)
 
 	wg := &sync.WaitGroup{}

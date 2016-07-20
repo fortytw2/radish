@@ -12,7 +12,7 @@ import (
 var DefaultTimeout = time.Second
 
 // A WorkFunc processes the data passed to a Worker
-type WorkFunc func([]byte) ([][]byte, error)
+type WorkFunc func(i interface{}) error
 
 // A Worker is a single unit of execution, working single threadedly
 type worker struct {
@@ -74,7 +74,7 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 				return
 			}
 		default:
-			var o []byte
+			var o interface{}
 			err := w.c.ConsumeTimeout(&o, DefaultTimeout)
 			if err != nil {
 				atomic.AddInt64(w.timeSinceWork, int64(DefaultTimeout))
@@ -84,17 +84,10 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 				atomic.SwapInt64(w.timeSinceWork, 0)
 			}
 
-			n, err := w.fn(o)
+			err = w.fn(o)
 			if err != nil {
 				w.c.Nack()
-				w.log.Log("msg", "could not process task", "error", err)
 				continue
-			}
-
-			if len(n) >= 0 {
-				for _, iface := range n {
-					w.p.Publish(iface)
-				}
 			}
 
 			w.c.Ack()
