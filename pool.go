@@ -16,7 +16,9 @@ type Pool struct {
 
 	fn WorkFunc
 
-	tsw int64
+	tsw  int64
+	wlck int64
+
 	log log.Logger
 	// workers are kept track of by their stop channel
 	workers []chan struct{}
@@ -90,12 +92,13 @@ func (p *Pool) addWorker() error {
 	stop := make(chan struct{})
 	p.wg.Add(1)
 	w, err := newWorker(&workerOpts{
-		b:     p.b,
-		queue: p.queue,
-		fn:    p.fn,
-		tsw:   &p.tsw,
-		stop:  stop,
-		log:   p.log,
+		b:        p.b,
+		queue:    p.queue,
+		fn:       p.fn,
+		tsw:      &p.tsw,
+		workLock: &p.wlck,
+		stop:     stop,
+		log:      p.log,
 	})
 	if err != nil {
 		return err

@@ -24,18 +24,20 @@ type worker struct {
 	log log.Logger
 
 	timeSinceWork *int64
+	workLock      *int64
 
 	stop chan struct{}
 }
 
 // workerOpts are used to set up a new worker
 type workerOpts struct {
-	b     Broker
-	queue string
-	fn    WorkFunc
-	tsw   *int64
-	stop  chan struct{}
-	log   log.Logger
+	b        Broker
+	queue    string
+	fn       WorkFunc
+	tsw      *int64
+	workLock *int64
+	stop     chan struct{}
+	log      log.Logger
 }
 
 // NewWorker creates a new worker
@@ -55,6 +57,7 @@ func newWorker(opts *workerOpts) (*worker, error) {
 		c:             c,
 		p:             p,
 		timeSinceWork: opts.tsw,
+		workLock:      opts.workLock,
 		fn:            opts.fn,
 		stop:          opts.stop,
 		log:           opts.log,
@@ -77,18 +80,23 @@ func (w *worker) Work(wg *sync.WaitGroup) {
 			var o interface{}
 			err := w.c.ConsumeTimeout(&o, DefaultTimeout)
 			if err != nil {
-				atomic.AddInt64(w.timeSinceWork, int64(DefaultTimeout))
+				one := atomic.LoadInt64(w.workLock)
+				if one == 0 {
+					atomic.AddInt64(w.timeSinceWork, int64(DefaultTimeout))
+				}
 				time.Sleep(10 * time.Millisecond)
 				continue
 			} else {
 				atomic.SwapInt64(w.timeSinceWork, 0)
 			}
 
+			atomic.AddInt64(w.workLock, 1)
 			err = w.fn(o)
 			if err != nil {
-				w.c.Nack()
+				w.c.Ack()
 				continue
 			}
+			atomic.AddInt64(w.workLock, -1)
 
 			w.c.Ack()
 		}
